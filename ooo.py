@@ -21,14 +21,12 @@ class CandyBlockException(Exception):
         Exception.__init__(self,"Exception in {0}:\n{1}".format(block,traceback))
 
 class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
-    INPUTS = 0
-    OUTPUTS = 0
+    INPUTS = []
+    OUTPUTS = []
 
-    def __init__(self, inputs, outputs, errors, *args, **kwargs):
-        assert len(inputs) == self.INPUTS
-        assert len(outputs) == self.OUTPUTS
-        self.inputs = inputs
-        self.outputs = outputs
+    def __init__(self, *args, **kwargs):
+        self.inputs = dict([(in_name,multiprocessing.Queue()) for in_name in self.INPUTS])
+        self.outputs = dict([(out_name,multiprocessing.Queue()) for out_name in self.OUTPUTS])
         self.errors = multiprocessing.Queue()
         multiprocessing.Process.__init__(self)
         self.daemon = True
@@ -53,7 +51,7 @@ class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
             raise CandyBlockException(self,self.errors.get())
 
     def process(self):
-        pass
+        self.spin()
 
     def init(self):
         pass
@@ -85,38 +83,42 @@ class BananaGuard(threading.Thread):
     def woo(self, data):
         map(lambda q: q.put(data), self.out_qs)
 
-class NightosphereBlock(multiprocessing.Process, SafeRefreshMixin):
-    # Synchronous block 
-    INPUTS = 0
-    OUTPUTS = 0
+class SoulBlock(CandyBlock):
+    def __init__(self, chunksize, *args, **kwargs):
+        self.chunksize = chunksize
+        self.clock_lock = multiprocessing.Semaphore(0)
+        CandyBlock.__init__(*args,**kwargs)
 
-    def __init__(self, clock, inputs, outputs, **params):
-        assert len(inputs) == self.INPUTS
-        assert len(outputs) == self.OUTPUTS
-        self.clock = clock
-        self.inputs = inputs
-        self.outputs = outputs
-        self.params = params
-        multiprocessing.Process.__init__(self)
-        self.daemon = True
-        self.last_cycle_cpu_time = 0
-        self.last_cycle_wall_time = 0
-        self.init()
-
-    def init(self):
-        pass
+    def clock(self):
+        self.clock_lock.release()
 
     def run(self):
+        self.sync_thread=threading.Thread(target=self.run2)
+        self.sync_thread.daemon=True
+        self.sync_thread.start()
+        CandyBlock.run(self)
+
+    def stop(self):
+        CandyBlock.stop(self)
+        self.clock_lock.release()
+
+    def run2(self):
         while True:
             print "waiting for clk"
-            self.clock.acquire()
+            self.clock_lock.acquire()
+            if not self.keep_running():
+                break
             print "clk acquired"
 
             start_cpu_time = time.clock()
             start_wall_time = time.time()
 
             print "stepping"
-            self.step()
+            try:
+                self.step()
+            except:
+                print "well, shit, something went wrong and i'm not quite sure what to do about it"
+                raise
             print "stepped"
 
             end_cpu_time = time.clock()
@@ -125,16 +127,57 @@ class NightosphereBlock(multiprocessing.Process, SafeRefreshMixin):
             self.last_cycle_wall_time = end_wall_time - start_wall_time
     
     def step(self):
-        unacceptables, in_vals = zip(*[q.get() for q in self.inputs]) # Read
-        if any(unacceptables):
-            results = [(True, None)] * self.OUTPUTS
-        else:
-            results = self.process(*in_vals)
-        for res, q in zip(results, self.outputs):
-            q.put(res) # Write
+       pass
 
-    def process(self, *args):
-        raise NotImplementedError
+
+#class SoulBlock(multiprocessing.Process, SafeRefreshMixin):
+#    # Synchronous block 
+#    INPUTS = []
+#    OUTPUTS = []
+#
+#    def __init__(self, chunksize, *args, **kwargs):
+#        self.clock_lock = multiprocessing.Semaphore(0)
+#        self.inputs = dict([(in_name,multiprocessing.Queue()) for in_name in self.INPUTS])
+#        self.outputs = dict([(out_name,multiprocessing.Queue()) for out_name in self.OUTPUTS])
+#        multiprocessing.Process.__init__(self)
+#        self.daemon = True
+#        self.last_cycle_cpu_time = 0
+#        self.last_cycle_wall_time = 0
+#        self.init(*args,**kwargs)
+#
+#    def init(self):
+#        pass
+#
+#    def clock(self):
+#        self.clock_lock.release()
+#
+#    def run(self):
+#        while True:
+#            print "waiting for clk"
+#            self.clock_lock.acquire()
+#            print "clk acquired"
+#
+#            start_cpu_time = time.clock()
+#            start_wall_time = time.time()
+#
+#            print "stepping"
+#            self.step()
+#            print "stepped"
+#
+#            end_cpu_time = time.clock()
+#            end_wall_time = time.time()
+#            self.last_cycle_cpu_time = end_cpu_time - start_cpu_time
+#            self.last_cycle_wall_time = end_wall_time - start_wall_time
+#    
+#    def step(self):
+#        #unacceptables, in_vals = zip(*[q.get() for q in self.inputs]) # Read
+#        #if any(unacceptables):
+#        #    results = [(True, None)] * self.OUTPUTS
+#        #else:
+#        #    results = self.process(*in_vals)
+#        #for res, q in zip(results, self.outputs):
+#        #    q.put(res) # Write
+#        pass
 
 
 class NightosphereBuffer(multiprocessing.Process, SafeRefreshMixin):

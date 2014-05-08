@@ -3,8 +3,8 @@ import pygame
 import pygame.midi
 
 class MidiInBlock(CandyBlock):
-	INPUTS=0
-	OUTPUTS=1
+	INPUTS=[]
+	OUTPUTS=['notes']
 
 	def process(self):
 		pygame.init()
@@ -12,23 +12,23 @@ class MidiInBlock(CandyBlock):
 		print "# of MIDI devices:",pygame.midi.get_count()
 		device_id=3
 		midi_in=pygame.midi.Input(device_id)
+		q=self.outputs['notes']
 		while self.keep_running():
 			for e in midi_in.read(1024):
 				e=e[0]
 
 				if e[0]==144:
-					self.outputs[0].put({'note_on':{'note':e[1],'velocity':e[2]}})
+					q.put({'note_on':{'note':e[1],'velocity':e[2]}})
 				elif e[0]==128:
-					self.outputs[0].put({'note_off':{'note':e[1]}})
+					q.put({'note_off':{'note':e[1]}})
 			# yield?
 
 if __name__=='__main__':
 	from multiprocessing import Queue
 	import time
-	q=Queue()
-	err=Queue()
-	m=MidiInBlock([],[q],err)
+	m=MidiInBlock()
 	m.start()
+	q=m.outputs['notes']
 	try:
 		while True:
 			while not q.empty():
