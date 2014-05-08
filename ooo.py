@@ -40,10 +40,11 @@ class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
         self.exit.wait()
 
     def run(self):
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        #signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
             self.process()
         except:
+            traceback.print_exc()
             self.errors.put(traceback.format_exc())
 
     def handle_errors(self):
@@ -87,7 +88,7 @@ class SoulBlock(CandyBlock):
     def __init__(self, chunksize, *args, **kwargs):
         self.chunksize = chunksize
         self.clock_lock = multiprocessing.Semaphore(0)
-        CandyBlock.__init__(*args,**kwargs)
+        CandyBlock.__init__(self, *args,**kwargs)
 
     def clock(self):
         self.clock_lock.release()
