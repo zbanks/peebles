@@ -69,23 +69,50 @@ class BananaGuard(threading.Thread):
         map(lambda q: q.put(data), self.out_qs)
 
 class NightosphereBlock(multiprocessing.Process, SafeRefreshMixin):
+    # Synchronous block 
     INPUTS = 0
     OUTPUTS = 0
 
-    def __init__(self, inputs, outputs, **params):
+    def __init__(self, clock, inputs, outputs, **params):
         assert len(inputs) == self.INPUTS
         assert len(outputs) == self.OUTPUTS
+        self.clock = clock
         self.inputs = inputs
         self.outputs = outputs
         self.params = params
         multiprocessing.Process.__init__(self)
         self.daemon = True
+        self.last_cycle_cpu_time = 0
 
     def run(self):
+        while True:
+            self.clock.acquire()
+
+            start_cpu_time = time.clock()
+            start_wall_time = time.time()
+
+            self.step()
+
+            end_cpu_time = time.clock()
+            end_wall_time = time.time()
+            self.last_cycle_time = end_cpu_time - start_cpu_time
+            self.last_cycle_wall_time = end_wall_time - start_wall_time
+    
+    def step(self):
+        unacceptables, in_vals = zip(*[q.get() for q in self.inputs]) # Read
+        if any(unacceptables):
+            results = [(True, None)] * self.OUTPUTS
+        else:
+            results = self.process(*in_vals)
+        for res, q in zip(results, self.outputs):
+            q.put(res) # Write
+
+    def process(self, *args):
         raise NotImplementedError
 
 
 class NightosphereBuffer(multiprocessing.Process, SafeRefreshMixin):
+    # Buffer & Connection between two synchronous blocks 
     STOP_SIGNAL = Exception()
 
     def __init__(self, clock, inp_q, out_qs, depth=0):
@@ -105,6 +132,7 @@ class NightosphereBuffer(multiprocessing.Process, SafeRefreshMixin):
                 break
             self.history.append((unacceptable, data))
             if len(self.history) > self.depth:
+                # This currently has horrible behavior if self.depth decreases XXX
                 unacceptable, data = self.history.popleft()
             else:
                 unacceptable = True
