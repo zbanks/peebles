@@ -8,25 +8,58 @@ import collections
 import multiprocessing
 import threading
 import time
+import signal
+import sys
+import traceback
 
 from doitlive.refreshable import SafeRefreshMixin, SafeRefreshableLoop
+
+class CandyBlockException(Exception):
+    def __init__(self, block, traceback):
+        self.block = block
+        self.traceback = traceback
+        Exception.__init__(self,"Exception in {0}:\n{1}".format(block,traceback))
 
 class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
     INPUTS = 0
     OUTPUTS = 0
 
-    def __init__(self, inputs, outputs, **params):
+    def __init__(self, inputs, outputs, errors, *args, **kwargs):
         assert len(inputs) == self.INPUTS
         assert len(outputs) == self.OUTPUTS
         self.inputs = inputs
         self.outputs = outputs
-        self.params = params
+        self.errors = multiprocessing.Queue()
         multiprocessing.Process.__init__(self)
         self.daemon = True
+        self.exit=multiprocessing.Event()
+        self.init(*args,**kwargs)
+
+    def keep_running(self):
+        return not self.exit.is_set()
+
+    def spin(self):
+        self.exit.wait()
 
     def run(self):
-        raise NotImplementedError
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        try:
+            self.process()
+        except:
+            self.errors.put(traceback.format_exc())
 
+    def handle_errors(self):
+        if not self.errors.empty():
+            raise CandyBlockException(self,self.errors.get())
+
+    def process(self):
+        pass
+
+    def init(self):
+        pass
+
+    def stop(self):
+        self.exit.set()
 
 class Peebles(SafeRefreshMixin):
     def __init__(self):
