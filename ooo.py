@@ -84,10 +84,11 @@ class BananaGuard(threading.Thread):
         map(lambda q: q.put(data), self.out_qs)
 
 class SoulBlock(CandyBlock):
-    def __init__(self, chunksize, *args, **kwargs):
+    def __init__(self, chunksize, rate, *args, **kwargs):
         self.chunksize = chunksize
+        self.rate = rate
         self.clock_lock = multiprocessing.Semaphore(0)
-        CandyBlock.__init__(*args,**kwargs)
+        CandyBlock.__init__(self,*args,**kwargs)
 
     def clock(self):
         self.clock_lock.release()
@@ -117,8 +118,8 @@ class SoulBlock(CandyBlock):
             try:
                 self.step()
             except:
-                print "well, shit, something went wrong and i'm not quite sure what to do about it"
                 raise
+                print "well, shit, something went wrong and i'm not quite sure what to do about it"
             print "stepped"
 
             end_cpu_time = time.clock()
