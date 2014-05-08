@@ -7,6 +7,7 @@ import collections
 import multiprocessing
 import threading
 import time
+import signal
 
 from doitlive.refreshable import SafeRefreshMixin, SafeRefreshableLoop
 
@@ -14,18 +15,34 @@ class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
     INPUTS = 0
     OUTPUTS = 0
 
-    def __init__(self, inputs, outputs, **params):
+    def __init__(self, inputs, outputs, *args, **kwargs):
         assert len(inputs) == self.INPUTS
         assert len(outputs) == self.OUTPUTS
         self.inputs = inputs
         self.outputs = outputs
-        self.params = params
         multiprocessing.Process.__init__(self)
         self.daemon = True
+        self.exit=multiprocessing.Event()
+        self.init(*args,**kwargs)
+
+    def keep_running(self):
+        return not self.exit.is_set()
+
+    def spin(self):
+        self.exit.wait()
 
     def run(self):
-        raise NotImplementedError
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        self.process()
 
+    def process(self):
+        pass
+
+    def init(self):
+        pass
+
+    def stop(self):
+        self.exit.set()
 
 class Peebles(SafeRefreshMixin):
     def __init__(self):
