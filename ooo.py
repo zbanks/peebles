@@ -104,30 +104,37 @@ class SoulBlock(CandyBlock):
         CandyBlock.stop(self)
         self.clock_lock.release()
 
+    def init_sync(self):
+        pass
+    def destroy_sync(self):
+        pass
+
     def run2(self):
+        self.init_sync()
         while True:
-            print "waiting for clk"
+            #print "waiting for clk"
             self.clock_lock.acquire()
             if not self.keep_running():
                 break
-            print "clk acquired"
+            #print "clk acquired"
 
             start_cpu_time = time.clock()
             start_wall_time = time.time()
 
-            print "stepping"
+            #print "stepping"
             try:
                 self.step()
             except:
                 self.errors.put(traceback.format_exc())
                 self.stop()
                 break
-            print "stepped"
+            #print "stepped"
 
             end_cpu_time = time.clock()
             end_wall_time = time.time()
             self.last_cycle_cpu_time = end_cpu_time - start_cpu_time
             self.last_cycle_wall_time = end_wall_time - start_wall_time
+        self.destroy_sync()
     
     def step(self):
        pass
