@@ -13,11 +13,8 @@ class MidiInBlock(CandyBlock):
 		device_id=3
 		midi_in=pygame.midi.Input(device_id)
 		while self.keep_running():
-			while True:
-				e=midi_in.read(1)
-				if len(e)==0:
-					break
-				e=e[0][0]
+			for e in midi_in.read(1024):
+				e=e[0]
 
 				if e[0]==144:
 					self.outputs[0].put({'note_on':{'note':e[1],'velocity':e[2]}})

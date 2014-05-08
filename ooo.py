@@ -13,6 +13,12 @@ import traceback
 
 from doitlive.refreshable import SafeRefreshMixin, SafeRefreshableLoop
 
+class CandyBlockException(Exception):
+    def __init__(self, block, traceback):
+        self.block = block
+        self.traceback = traceback
+        Exception.__init__(self,"Exception in {0}:\n{1}".format(block,traceback))
+
 class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
     INPUTS = 0
     OUTPUTS = 0
@@ -38,18 +44,12 @@ class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
             self.process()
-        except Exception as e:
-            self.errors.put((e,traceback.format_tb(sys.exc_info()[2])))
+        except:
+            self.errors.put(traceback.format_exc())
 
     def handle_errors(self):
         if not self.errors.empty():
-            (e,tb)=self.errors.get()
-            print "ERROR IN BLOCK"
-            print "-----"
-            for line in tb:
-                print line
-            print "-----"
-            raise e
+            raise CandyBlockException(self,self.errors.get())
 
     def process(self):
         pass
