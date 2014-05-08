@@ -27,7 +27,6 @@ class SynthBlock(SoulBlock):
 						self.notes[n]['velocity']=v
 				elif 'note_off' in e:
 					del self.notes[e['note_off']['note']]
-				print self.notes
 
 	def synthesize(self,note,velocity,t):
 		freq = 440*2**((note-69)/12)

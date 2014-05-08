@@ -118,8 +118,9 @@ class SoulBlock(CandyBlock):
             try:
                 self.step()
             except:
-                raise
-                print "well, shit, something went wrong and i'm not quite sure what to do about it"
+                self.errors.put(traceback.format_exc())
+                self.stop()
+                break
             print "stepped"
 
             end_cpu_time = time.clock()
