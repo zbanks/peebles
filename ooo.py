@@ -15,8 +15,8 @@ class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
     OUTPUTS = 0
 
     def __init__(self, inputs, outputs, **params):
-        assert len(inputs) == self.INPUTS:
-        assert len(outputs) == self.OUTPUTS:
+        assert len(inputs) == self.INPUTS
+        assert len(outputs) == self.OUTPUTS
         self.inputs = inputs
         self.outputs = outputs
         self.params = params
@@ -56,8 +56,8 @@ class NightosphereBlock(multiprocessing.Process, SafeRefreshMixin):
     OUTPUTS = 0
 
     def __init__(self, inputs, outputs, **params):
-        assert len(inputs) == self.INPUTS:
-        assert len(outputs) == self.OUTPUTS:
+        assert len(inputs) == self.INPUTS
+        assert len(outputs) == self.OUTPUTS
         self.inputs = inputs
         self.outputs = outputs
         self.params = params
