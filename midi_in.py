@@ -29,11 +29,14 @@ if __name__=='__main__':
 	from multiprocessing import Queue
 	import time
 	q=Queue()
-	m=MidiInBlock([],[q])
+	err=Queue()
+	m=MidiInBlock([],[q],err)
 	m.start()
 	try:
 		while True:
-			print q.get()
+			while not q.empty():
+				print q.get()
+			m.handle_errors()
 	except KeyboardInterrupt:
 		print "caught ctrl-c"
 		m.stop()

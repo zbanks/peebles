@@ -8,6 +8,8 @@ import multiprocessing
 import threading
 import time
 import signal
+import sys
+import traceback
 
 from doitlive.refreshable import SafeRefreshMixin, SafeRefreshableLoop
 
@@ -15,11 +17,12 @@ class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
     INPUTS = 0
     OUTPUTS = 0
 
-    def __init__(self, inputs, outputs, *args, **kwargs):
+    def __init__(self, inputs, outputs, errors, *args, **kwargs):
         assert len(inputs) == self.INPUTS
         assert len(outputs) == self.OUTPUTS
         self.inputs = inputs
         self.outputs = outputs
+        self.errors = multiprocessing.Queue()
         multiprocessing.Process.__init__(self)
         self.daemon = True
         self.exit=multiprocessing.Event()
@@ -33,7 +36,20 @@ class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
 
     def run(self):
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        self.process()
+        try:
+            self.process()
+        except Exception as e:
+            self.errors.put((e,traceback.format_tb(sys.exc_info()[2])))
+
+    def handle_errors(self):
+        if not self.errors.empty():
+            (e,tb)=self.errors.get()
+            print "ERROR IN BLOCK"
+            print "-----"
+            for line in tb:
+                print line
+            print "-----"
+            raise e
 
     def process(self):
         pass
