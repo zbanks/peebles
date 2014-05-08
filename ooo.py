@@ -74,20 +74,23 @@ class NightosphereBlock(multiprocessing.Process, SafeRefreshMixin):
             start_cpu_time = time.clock()
             start_wall_time = time.time()
 
-            unacceptables, in_vals = zip(*[q.get() for q in self.inputs]) # Read
-            if any(unacceptables):
-                results = [(True, None)] * self.OUTPUTS
-            else:
-                results = self.step(*in_vals)
-            for res, q in zip(results, self.outputs):
-                q.put(res) # Write
+            self.step()
 
             end_cpu_time = time.clock()
             end_wall_time = time.time()
             self.last_cycle_time = end_cpu_time - start_cpu_time
             self.last_cycle_wall_time = end_wall_time - start_wall_time
+    
+    def step(self):
+        unacceptables, in_vals = zip(*[q.get() for q in self.inputs]) # Read
+        if any(unacceptables):
+            results = [(True, None)] * self.OUTPUTS
+        else:
+            results = self.process(*in_vals)
+        for res, q in zip(results, self.outputs):
+            q.put(res) # Write
 
-    def step(self, *args):
+    def process(self, *args):
         raise NotImplementedError
 
 
