@@ -1,6 +1,7 @@
 #!/usr/bin/env python
+# Author: Zach Banks <zbanks@mit.edu>
+# License: MIT License
 # Peebles -- Async live music generation
-# Ooo - 'slow' async blocks
 
 
 import collections
@@ -66,19 +67,28 @@ class NightosphereBlock(multiprocessing.Process, SafeRefreshMixin):
         multiprocessing.Process.__init__(self)
         self.daemon = True
         self.last_cycle_cpu_time = 0
+        self.last_cycle_wall_time = 0
+        self.init()
+
+    def init(self):
+        pass
 
     def run(self):
         while True:
+            print "waiting for clk"
             self.clock.acquire()
+            print "clk acquired"
 
             start_cpu_time = time.clock()
             start_wall_time = time.time()
 
+            print "stepping"
             self.step()
+            print "stepped"
 
             end_cpu_time = time.clock()
             end_wall_time = time.time()
-            self.last_cycle_time = end_cpu_time - start_cpu_time
+            self.last_cycle_cpu_time = end_cpu_time - start_cpu_time
             self.last_cycle_wall_time = end_wall_time - start_wall_time
     
     def step(self):
