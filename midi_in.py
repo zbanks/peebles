@@ -19,7 +19,6 @@ class MidiInChild(block.Child):
 
 				if e[0]==144:
 					q.put({'note_on':{'note':e[1],'velocity':e[2]}})
-					fail()
 				elif e[0]==128:
 					q.put({'note_off':{'note':e[1]}})
 			# yield?
@@ -28,10 +27,12 @@ class MidiInChild(block.Child):
 		self.running=False # TODO make this a more thread-safe thing
 
 class MidiInBlock(CandyBlock):
-	INPUTS=[]
-	OUTPUTS=['notes']
+	def __init__(self):
+		self.INPUTS=[]
+		self.OUTPUTS=['notes']
 
-	def init(self):
+		CandyBlock.__init__(self)
+
 		mic=MidiInChild()
 		mic.parent=self
 		self.add_child(mic)

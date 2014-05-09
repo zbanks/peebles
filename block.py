@@ -55,7 +55,7 @@ class Child(threading.Thread):
     def stop(self):
         raise NotImplementedError
 
-# A block is a child that listens for data on a queue, and calls a callback when such data arrives.
+# A Listener is a child that listens for data on a queue, and calls a callback when such data arrives.
 # The queue should be interruptable for a listener's stop method to work.
 class Listener(Child):
     def __init__(self,queue,callback):
@@ -108,5 +108,3 @@ class Block:
 
     def problem_child(self,child,e,tb):
         self.control_queue.put((e,tb))
-
-

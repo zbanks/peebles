@@ -3,34 +3,45 @@ import threading
 import math
 
 class SynthBlock(SoulBlock):
-	def __init__(self):
-		self.INPUTS=[('notes',self.recv_note)]
-		self.OUTPUTS=['samples']
+	INPUTS=['notes']
+	OUTPUTS=['samples']
 
-		SoulBlock.__init__(self)
-
+	def init(self):
 		self.notes={}
 		self.notelock=threading.Lock()
 
-	def recv_note(self,e):
-		with self.notelock:
-			if 'note_on' in e:
-				p=e['note_on']
-				n=p['note']
-				v=p['velocity']
-				if n not in self.notes:
-					self.notes[n]={'velocity':v,'t':0.}
-				else:
-					self.notes[n]['velocity']=v
-			elif 'note_off' in e:
-				del self.notes[e['note_off']['note']]
+	def process(self):
+		q=self.inputs['notes']
+		while True:
+			e=q.get()
+			if not self.keep_running:
+				break
+			with self.notelock:
+				if 'note_on' in e:
+					p=e['note_on']
+					n=p['note']
+					v=p['velocity']
+					if n not in self.notes:
+						self.notes[n]={'velocity':v,'t':0.}
+					else:
+						self.notes[n]['velocity']=v
+				elif 'note_off' in e:
+					del self.notes[e['note_off']['note']]
 
 	def synthesize(self,note,velocity,t):
 		freq = 440*2**((note-69)/12.0)
+		# [t] = sec
+		# [rate] = samp / sec
+		# [2 pi freq] = 1 / sec
+		# sin(
 		return float(velocity)*math.sin(freq*2*math.pi*t)/128
 
 	def reduce_fn(self,values):
 		return sum(values)
+
+	def stop(self):
+		SoulBlock.stop(self)
+		self.inputs['notes'].put(None)
 
 	def step(self):
 		with self.notelock:
@@ -38,7 +49,8 @@ class SynthBlock(SoulBlock):
 			for note in self.notes:
 				self.notes[note]['t']+=float(self.chunksize)/self.rate
 		out=[self.reduce_fn([self.synthesize(note,params['velocity'],params['t']+float(i)/self.rate) for (note,params) in active_notes]) for i in range(self.chunksize)]
-		self.send('samples',out)
+		self.outputs['samples'].put(out)
+			
 
 if __name__=='__main__':
 	from multiprocessing import Queue
