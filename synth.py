@@ -1,13 +1,17 @@
-from ooo import SoulBlock
+from ooo import CandyBlock
 import threading
 import math
+import time
 
-class SynthBlock(SoulBlock):
-	def __init__(self):
-		self.INPUTS=[('notes',self.recv_note)]
-		self.OUTPUTS=['samples']
+class SynthBlock(CandyBlock):
+	def __init__(self,chunksize,rate):
+		self.INPUTS=[('notes',self.recv_note),('clock',self.step)]
+		self.OUTPUTS=['sound']
 
-		SoulBlock.__init__(self)
+		CandyBlock.__init__(self)
+
+		self.chunksize=chunksize
+		self.rate=rate
 
 		self.notes={}
 		self.notelock=threading.Lock()
@@ -26,19 +30,27 @@ class SynthBlock(SoulBlock):
 				del self.notes[e['note_off']['note']]
 
 	def synthesize(self,note,velocity,t):
+		def f(x):
+			if x%1>0.5:
+				return 1
+			return -1
+
 		freq = 440*2**((note-69)/12.0)
-		return float(velocity)*math.sin(freq*2*math.pi*t)/128
+		return float(velocity)*f(freq*t)/128
 
 	def reduce_fn(self,values):
 		return sum(values)
 
-	def step(self):
+	def step(self,value):
+		t=time.time()
 		with self.notelock:
 			active_notes=self.notes.items()
 			for note in self.notes:
 				self.notes[note]['t']+=float(self.chunksize)/self.rate
 		out=[self.reduce_fn([self.synthesize(note,params['velocity'],params['t']+float(i)/self.rate) for (note,params) in active_notes]) for i in range(self.chunksize)]
-		self.send('samples',out)
+		t=time.time()-t
+		print t
+		self.send('sound',out)
 
 if __name__=='__main__':
 	from multiprocessing import Queue

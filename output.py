@@ -7,80 +7,67 @@
 
 import pyaudio
 import struct
-import math
+import Queue
+import threading
+import time
 
-from ooo import *
+import block
+from ooo import CandyBlock
 
-class PyaudioOutputNightBlock(SoulBlock):
-    # Sync block, output over pyaudio
-    INPUTS = ["sound"]
-    OUTPUTS = []
-    NUM_FRAMES = 1
+class OutputChild(block.Child):
+    def process(self):
+        pa = pyaudio.PyAudio()
 
-    def init_sync(self):
-        self.pa = pyaudio.PyAudio()
-        self.stream = self.pa.open(format=pyaudio.paFloat32,
-                              channels=1, rate=self.rate,
-                              frames_per_buffer=self.chunksize,
-                              output=True)
-        self.process2([0.0] * (2 ** 10))
+        self.running=True
+        zeros=[0]*self.parent.chunksize
+        chunk=zeros
+        got=False
+        lt=0
 
-    def step(self):
-        unacceptables, in_vals = zip(*[q.get() for q in self.inputs.values()]) # Read
-        if any(unacceptables):
-            results = [(True, None)] * len(self.outputs)
-        else:
-            results = self.process2(*in_vals)
-        #for res, q in zip(results, self.outputs):
-            #q.put(res) # Write
+        stream = pa.open(format=pyaudio.paFloat32,
+                         channels=1, rate=self.parent.rate,
+                         frames_per_buffer=self.parent.chunksize,
+                         output=True)
 
-    def process2(self, chunk):
-        encoded_chunk = struct.pack(str(len(chunk)) + 'f', *chunk)
-        self.stream.write(encoded_chunk)
-        return []
+        while self.running:
+            self.parent.send('clock',None)
+            encoded_chunk = struct.pack(str(len(chunk)) + 'f', *self.parent.get_samples())
+            stream.write(encoded_chunk)
 
-    def destroy_sync(self): # Never called yet
-        self.stream.stop_stream()
-        self.stream.close()
-        self.pa.terminate()
-        SoulBlock.stop(self)
+        stream.stop_stream()
+        stream.close()
+        pa.terminate()
 
-import multiprocessing
-#po = PyaudioOutputNightBlock(1024, 22100)
-#inp = po.inputs["sound"]
-#clk = po.clock_lock
-#def qi(): inp.put((False, [math.sin(x / 24.0) for x in range(2 ** 10)]))
-#
-#import time
-##po.process2([math.sin(x / 24.0) for x in range(2 ** 10)])
-#qi()
-#qi()
-#po.start()
-#po.step()
-#while True:
-#    qi()
-#    po.clock()
-#    po.handle_errors()
-#    #po.process2([math.sin(x / 24.0) for x in range(2 ** 10)])
-#    #po.step()
-#
-#    time.sleep(0.1)
+    def stop(self):
+        self.running=False # TODO make this a more thread-safe thing
 
-if __name__=='__main__':
-    from multiprocessing import Queue
-    import time
-    po = PyaudioOutputNightBlock(1024, 22100)
-    inp=po.inputs['sound']
-    def qi(): inp.put((False, [math.sin(x * math.pi / 16.0) for x in range(2 ** 10)]))
-    qi()
-    po.start()
-    try:
-        while True:
-            qi()
-            po.clock()
-            po.handle_errors()
-            time.sleep(0.02)
-    except KeyboardInterrupt:
-        print "caught ctrl-c"
-        po.stop()
-        po.join()
+class OutputBlock(CandyBlock):
+    def __init__(self,chunksize,rate):
+        self.INPUTS=[('sound',self.got_samples)]
+        self.OUTPUTS=['clock']
+
+        CandyBlock.__init__(self)
+
+        self.chunksize=chunksize
+        self.rate=rate
+        self.samp_lock=threading.Lock()
+        self.full=False
+        self.zeros=[0]*self.chunksize
+        self.lt=0
+        self.samples=Queue.Queue()
+        self.samples_size=3
+
+        oc=OutputChild()
+        oc.parent=self
+        self.add_child(oc)
+
+    def get_samples(self):
+        if self.samples.empty():
+            print "underrun"
+            return self.zeros
+        return self.samples.get()
+
+    def got_samples(self,samples):
+        self.samples.put(samples)
+        if self.samples.qsize()>self.samples_size:
+            self.samples.get()

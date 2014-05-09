@@ -24,7 +24,8 @@ class CandyBlock(block.Block,multiprocessing.Process, SafeRefreshMixin):
         self.inputs={}
         for (in_name,callback) in self.INPUTS:
             q=block.InterruptableQueue(multiprocessing.Queue)
-            self.add_child(block.Listener(q,callback))
+            if callback:
+                self.add_child(block.Listener(q,callback))
             self.inputs[in_name]=q
 
         self.outputs = dict([(out_name,block.InterruptableQueue(multiprocessing.Queue)) for out_name in self.OUTPUTS])
@@ -149,19 +150,19 @@ class BananaGuard(block.Listener):
 #    def woo(self, data):
 #        map(lambda q: q.put(data), self.out_qs)
 
-class SoulBlock(CandyBlock):
-    def __init__(self, chunksize, rate):
-        self.chunksize = chunksize
-        self.rate = rate
-        self.clock_lock=block.InterruptableQueue(multiprocessing.Queue)
-        self.add_child(block.Listener(self.clock_lock,self.step))
-        CandyBlock.__init__(self)
-
-    def clock(self):
-        self.clock_lock.put(None)
-
-    def step(self,value=None):
-        pass
+#class SoulBlock(CandyBlock):
+#    def __init__(self, chunksize, rate):
+#        self.chunksize = chunksize
+#        self.rate = rate
+#        self.clock_lock=block.InterruptableQueue(multiprocessing.Queue)
+#        self.add_child(block.Listener(self.clock_lock,self.step))
+#        CandyBlock.__init__(self)
+#
+#    def clock(self):
+#        self.clock_lock.put(None)
+#
+#    def step(self,value=None):
+#        pass
 
 #class SoulBlock(multiprocessing.Process, SafeRefreshMixin):
 #    # Synchronous block 

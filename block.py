@@ -23,7 +23,7 @@ class InterruptableQueue:
         self.q.put(*args,**kwargs)
 
     def get(self,*args,**kwargs):
-        result=self.q.get(self,*args,**kwargs)
+        result=self.q.get(*args,**kwargs)
         if isinstance(result,InterruptObject):
             raise result.exception
         return result
