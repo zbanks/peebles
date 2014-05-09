@@ -1,10 +1,9 @@
+import block
 from ooo import CandyBlock
 import pygame
 import pygame.midi
 
-class MidiInBlock(CandyBlock):
-	INPUTS=[]
-	OUTPUTS=['notes']
+class MidiInChild(block.Child):
 
 	def process(self):
 		pygame.init()
@@ -12,16 +11,30 @@ class MidiInBlock(CandyBlock):
 		print "# of MIDI devices:",pygame.midi.get_count()
 		device_id=3
 		midi_in=pygame.midi.Input(device_id)
-		q=self.outputs['notes']
-		while self.keep_running():
+		q=self.parent.outputs['notes']
+		self.running=True
+		while self.running:
 			for e in midi_in.read(1024):
 				e=e[0]
 
 				if e[0]==144:
 					q.put({'note_on':{'note':e[1],'velocity':e[2]}})
+					fail()
 				elif e[0]==128:
 					q.put({'note_off':{'note':e[1]}})
 			# yield?
+
+	def stop(self):
+		self.running=False # TODO make this a more thread-safe thing
+
+class MidiInBlock(CandyBlock):
+	INPUTS=[]
+	OUTPUTS=['notes']
+
+	def init(self):
+		mic=MidiInChild()
+		mic.parent=self
+		self.add_child(mic)
 
 if __name__=='__main__':
 	from multiprocessing import Queue
@@ -33,8 +46,7 @@ if __name__=='__main__':
 		while True:
 			while not q.empty():
 				print q.get()
-			m.handle_errors()
 	except KeyboardInterrupt:
 		print "caught ctrl-c"
-		m.stop()
+		m.shutdown()
 		m.join()

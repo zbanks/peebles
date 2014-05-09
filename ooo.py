@@ -6,59 +6,47 @@
 
 import collections
 import multiprocessing
-import threading
 import time
 import signal
 import sys
 import traceback
+import block
+import threading
 
 from doitlive.refreshable import SafeRefreshMixin, SafeRefreshableLoop
 
-class CandyBlockException(Exception):
-    def __init__(self, block, traceback):
-        self.block = block
-        self.traceback = traceback
-        Exception.__init__(self,"Exception in {0}:\n{1}".format(block,traceback))
-
-class CandyBlock(multiprocessing.Process, SafeRefreshMixin):
+class CandyBlock(block.Block,multiprocessing.Process, SafeRefreshMixin):
     INPUTS = []
     OUTPUTS = []
 
     def __init__(self, *args, **kwargs):
-        self.inputs = dict([(in_name,multiprocessing.Queue()) for in_name in self.INPUTS])
+        block.Block.__init__(self)
+        self.inputs={}
+        for (in_name,callback) in self.INPUTS:
+            q=block.InterruptableQueue(multiprocessing.Queue)
+            self.add_child(Listener(q,callback))
+            self.inputs[in_name]=q
+
         self.outputs = dict([(out_name,multiprocessing.Queue()) for out_name in self.OUTPUTS])
-        self.errors = multiprocessing.Queue()
+
+        self.ipc_queue=block.InterruptableQueue(multiprocessing.Queue)
+        self.add_child(block.Listener(self.ipc_queue,self.recv_ipc))
+
         multiprocessing.Process.__init__(self)
         self.daemon = True
         self.exit=multiprocessing.Event()
         self.init(*args,**kwargs)
 
-    def keep_running(self):
-        return not self.exit.is_set()
-
-    def spin(self):
-        self.exit.wait()
-
     def run(self):
-        #signal.signal(signal.SIGINT, signal.SIG_IGN)
-        try:
-            self.process()
-        except:
-            traceback.print_exc()
-            self.errors.put(traceback.format_exc())
+        signal.signal(signal.SIGINT,signal.SIG_IGN) # disregard ctrl-c
+        block.Block.run(self)
 
-    def handle_errors(self):
-        if not self.errors.empty():
-            raise CandyBlockException(self,self.errors.get())
+    def recv_ipc(self,message):
+        self.stop() # for now, stop on all messages
 
-    def process(self):
-        self.spin()
+    def shutdown(self):
+        self.ipc_queue.put(None)
 
-    def init(self):
-        pass
-
-    def stop(self):
-        self.exit.set()
 
 class Peebles(SafeRefreshMixin):
     def __init__(self):
@@ -216,4 +204,5 @@ class NightosphereBuffer(multiprocessing.Process, SafeRefreshMixin):
             else:
                 unacceptable = True
             map(lambda q: q.put((unacceptable, data)), self.out_qs)
+
 
