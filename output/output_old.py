@@ -32,7 +32,10 @@ class OutputChild(block.Child):
         while self.running:
             self.parent.send('clock',None)
             encoded_chunk = struct.pack(str(len(chunk)) + 'f', *self.parent.get_samples())
+            t=time.time()
             stream.write(encoded_chunk)
+            print time.time()-t
+            time.sleep(0)
 
         stream.stop_stream()
         stream.close()
@@ -55,7 +58,7 @@ class OutputBlock(CandyBlock):
         self.zeros=[0]*self.chunksize
         self.lt=0
         self.samples=Queue.Queue()
-        self.samples_size=3
+        self.samples_size=4
 
         oc=OutputChild()
         oc.parent=self

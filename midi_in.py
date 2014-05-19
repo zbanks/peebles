@@ -18,9 +18,9 @@ class MidiInChild(block.Child):
 				e=e[0]
 
 				if e[0]==144:
-					q.put({'note_on':{'note':e[1],'velocity':e[2]}})
+					q.put({'event_type':'note_on','note':e[1],'velocity':e[2]/256.})
 				elif e[0]==128:
-					q.put({'note_off':{'note':e[1]}})
+					q.put({'event_type':'note_off','note':e[1]})
 			# yield?
 
 	def stop(self):
