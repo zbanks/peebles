@@ -3,24 +3,29 @@
 
 int rate;
 int chunksize;
+double attack=0.0000001; // attack exponent base
+double sustain=.5; // sustain exponent base
+double release=0.0001; // release exponent base
+double ttl=1; // seconds to live after release
 
 typedef struct
 {
 	char active;
 	int note;
-	float velocity;
-	float t;
-	float hit;
-	float release;
+	double velocity;
+	double t;
+	double hit;
+	double release;
 } note_t;
 
-float reduce(float cur,float new)
+double reduce(double cur,double new)
 {
 	return cur+new;
 }
 
-float f(float t)
+double f(double t)
 {
+	//return sin(t*3.14159*2);
 	if(fmod(t,1)<0.5)
 	{
 		return -1;
@@ -28,27 +33,35 @@ float f(float t)
 	return 1;
 }
 
-float gen(note_t* note)
+double gen(note_t* note)
 {
-	float freq=pow(2,(note->note-69)/12.)*440.;
-	float base;
+	double freq=pow(2,(note->note-69)/12.)*440.;
+	double base;
+	double t_hold;
+	double t_release;
 	base=f(freq*note->t)*note->velocity;
-	return base;
+	t_hold=note->t-note->hit;
+	t_release=note->t-note->release;
+	if(note->release < note->hit || t_release < 0)
+	{
+		t_release=0;
+	}
+	return base*(1-pow(attack,t_hold))*pow(sustain,t_hold)*pow(release,t_release);
 }
 
 char still_active(note_t* note)
 {
-	if(note->release > note->hit && (note->t - note->hit) > 0)
+	if(note->release > note->hit && (note->t - note->release) > ttl)
 	{
 		return 0;
 	}
 	return 1;
 }
 
-void synth(float* buffer,note_t* notes,int num_notes)
+void synth(double* buffer,note_t* notes,int num_notes)
 {
 	int i,j;
-	float delta_t=1./rate;
+	double delta_t=1./rate;
 
 	for(j=0;j<chunksize;j++)
 	{
@@ -79,7 +92,7 @@ int main()
 
 	note_t note[2];
 
-	float buffer[chunksize];
+	double buffer[chunksize];
 
 	int i;
 

@@ -15,7 +15,7 @@ class SynthBlock(CandyBlock):
 		self.synth_c=cdll.LoadLibrary(os.path.join(os.path.dirname(os.path.abspath(__file__)),'synth.o'))
 		c_int.in_dll(self.synth_c,'rate').value=rate
 		c_int.in_dll(self.synth_c,'chunksize').value=chunksize
-		self.c_buf=(c_float*chunksize)()
+		self.c_buf=(c_double*chunksize)()
 		self.c_note_arr=(self.NOTE*maxnotes)()
 		self.notes={}
 		self.notelock=threading.Lock()
@@ -24,10 +24,10 @@ class SynthBlock(CandyBlock):
 		_fields_ = [
 			('active',c_char),
 			('note',c_int),
-			('velocity',c_float),
-			('t',c_float),
-			('hit',c_float),
-			('release',c_float)]
+			('velocity',c_double),
+			('t',c_double),
+			('hit',c_double),
+			('release',c_double)]
 
 	def recv_note(self,e):
 		with self.notelock:

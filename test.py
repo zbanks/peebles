@@ -9,13 +9,15 @@ pb=Peebles()
 
 pb.add_block('piano',MidiInBlock())
 pb.add_block('screen',PrintBlock())
-a=10
-pb.add_block('sound',OutputBlock(2**a,48000))
-pb.add_block('synth',SynthBlock(2**a,48000))
+a=128
+r=48000
+buf=3
+pb.add_block('sound',OutputBlock(a,r,buf))
+pb.add_block('synth',SynthBlock(a,r))
 
 pb.add_connection('link1',('sound','clock'),[('synth','clock')])
 pb.add_connection('link2',('synth','sound'),[('sound','sound')])
-pb.add_connection('link3',('piano','notes'),[('synth','notes')])
+pb.add_connection('link3',('piano','notes'),[('synth','notes'),('screen','print')])
 
 try:
 	while True:
