@@ -4,7 +4,6 @@ import pygame
 import pygame.midi
 
 class MidiInChild(block.Child):
-
 	def process(self):
 		pygame.init()
 		pygame.midi.init()

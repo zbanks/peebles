@@ -1,23 +1,36 @@
 from ooo import Peebles
 from midi_in import MidiInBlock
-from debug import PrintBlock
+from debug import PrintBlock, MidiControlBlock
 from output import OutputBlock
 from synth import SynthBlock
+from looper import LooperBlock
 import time
+
+USE_LOOPER = False
 
 pb=Peebles()
 
 pb.add_block('piano',MidiInBlock())
 pb.add_block('screen',PrintBlock())
-a=128
+a=256
 r=48000
 buf=3
 pb.add_block('sound',OutputBlock(a,r,buf))
 pb.add_block('synth',SynthBlock(a,r))
+pb.add_block('mcontrol', MidiControlBlock())
+if USE_LOOPER:
+    pb.add_block('looper', LooperBlock())
 
 pb.add_connection('link1',('sound','clock'),[('synth','clock')])
 pb.add_connection('link2',('synth','sound'),[('sound','sound')])
-pb.add_connection('link3',('piano','notes'),[('synth','notes'),('screen','print')])
+pb.add_connection('link3',('piano','notes'),[('mcontrol','notes'),('screen','print')])
+if USE_LOOPER:
+    pb.add_connection('link4',('mcontrol','notes'),[('looper','notes')])
+    pb.add_connection('link5',('mcontrol','control'),[('looper','control')])
+    pb.add_connection('link6',('looper','notes'),[('synth','notes')])
+else:
+    pb.add_connection('link7',('mcontrol','notes'),[('synth','notes')])
+
 
 try:
 	while True:
