@@ -1,6 +1,4 @@
 import block
-import pygame
-import pygame.midi
 import time
 
 from ooo import CandyBlock

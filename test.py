@@ -4,6 +4,7 @@ from debug import PrintBlock, MidiControlBlock
 from output import OutputBlock
 from synth import SynthBlock
 from looper import LooperBlock
+from metronome import MetronomeBlock
 import time
 
 USE_LOOPER = False
@@ -18,6 +19,8 @@ buf=3
 pb.add_block('sound',OutputBlock(a,r,buf))
 pb.add_block('synth',SynthBlock(a,r))
 pb.add_block('mcontrol', MidiControlBlock())
+pb.add_block('metronome', MetronomeBlock())
+
 if USE_LOOPER:
     pb.add_block('looper', LooperBlock())
 
@@ -30,7 +33,7 @@ if USE_LOOPER:
     pb.add_connection('link6',('looper','notes'),[('synth','notes')])
 else:
     pb.add_connection('link7',('mcontrol','notes'),[('synth','notes')])
-
+pb.add_connection('link8',('metronome','beat'),[('screen','print')])
 
 try:
 	while True:
