@@ -5,6 +5,7 @@ from output import OutputBlock
 from synth import SynthBlock
 from looper import LooperBlock
 from metronome import MetronomeBlock
+from seq import GridSeqBlock, unison_seq
 import time
 
 USE_LOOPER = False
@@ -20,6 +21,7 @@ pb.add_block('sound',OutputBlock(a,r,buf))
 pb.add_block('synth',SynthBlock(a,r))
 pb.add_block('mcontrol', MidiControlBlock())
 pb.add_block('metronome', MetronomeBlock())
+pb.add_block('seq', unison_seq())
 
 if USE_LOOPER:
     pb.add_block('looper', LooperBlock())
@@ -33,7 +35,8 @@ if USE_LOOPER:
     pb.add_connection('link6',('looper','notes'),[('synth','notes')])
 else:
     pb.add_connection('link7',('mcontrol','notes'),[('synth','notes')])
-pb.add_connection('link8',('metronome','beat'),[('screen','print')])
+pb.add_connection('link8',('metronome','beat'),[('seq', 'beat')])
+pb.add_connection('link9',('seq', 'notes'),[('synth', 'notes')])
 
 try:
 	while True:

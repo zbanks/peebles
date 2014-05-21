@@ -47,7 +47,7 @@ class MetronomeBlock(CandyBlock):
         #self.parent = self
         self.add_child(child)
 
-        self.delta_t = 0.5
+        self.delta_t = 0.3
         self.next_tick = 0
 
         self.ticking = True
